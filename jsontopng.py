@@ -2,7 +2,7 @@ import json
 from PIL import Image
 
 def convert():
-    data = json.load(open("grid.json"))
+    data = json.load(open("db/grid.json"))
     height = len(data)
     width = len(data[0])
 

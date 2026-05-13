@@ -15,14 +15,18 @@ USERNAME = "auc/place"
 PASSWORD = os.getenv("AUC_PASSWORD")
 UPSINCE = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
 grid = [["FFFFFF"] * 1024 for _ in range(1024)]
-if not os.path.exists("grid.json"):
-    print("grid.json not found, creating it...")
-    with open("grid.json", "w") as f:
-        json.dump(grid, f)
-else:
-    with open("grid.json", "r") as f:
-        grid = json.load(f)
 
+# DB Initialization
+def createDB():
+    print("Creating database files...")
+    with open("db/grid.json", "w") as f:
+        json.dump(grid, f)
+    with open("db/userdata.json", "w") as f:
+        json.dump({}, f)
+if not os.path.exists("db/grid.json") or not os.path.exists("db/userdata.json"):
+    createDB()
+
+# Image Uploading
 def upload_image(file_path):
     with open(file_path, "rb") as f:
         response = requests.post(
@@ -40,12 +44,17 @@ def upload_image(file_path):
         raise Exception("Upload failed:", data)
 
 def on_message(originalmsg):
+    # Parsing
     print(f"Bot received: {originalmsg}")
     message = originalmsg.split("|")[1]
+    user = originalmsg.split("|")[0]
     if originalmsg.startswith("auroracross|"):
+        user = message.split(": ", 1)[0].removeprefix("from ") if ": " in message else user
         message = message.split(": ", 1)[1] if ": " in message else message
     if originalmsg.startswith("auc/place|"):
         return
+    
+    # Commands
     if message.startswith("a/p uptime"):
         api.sendmsg(f"been running since {UPSINCE[:10]} at {UPSINCE[11:19]} UTC")
     elif message.startswith("a/p ping"):
@@ -61,9 +70,9 @@ def on_message(originalmsg):
         y = int(parts[1])
         color = parts[2].lstrip("#").upper()
         grid[y][x] = color
-        with open("grid.json", "w") as f:
+        with open("db/grid.json", "w") as f:
             json.dump(grid, f)
-        api.sendmsg(f"placed {color} at {x}, {y}")
+        api.sendmsg(f"{user} placed {color} at {x}, {y}")
     elif message.startswith("a/p grid"):
         jsontopng.convert()
         link = upload_image("grid.png")
