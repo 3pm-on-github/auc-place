@@ -61,7 +61,7 @@ def on_message(originalmsg):
     if originalmsg.startswith("auc/place|"):
         return
     if user not in userdata:
-        userdata[user] = {"pixelsleft": 25} # maxes out at 25.
+        userdata[user] = {"pixelsleft": 25, "maxcharges": 25} # default max at 25.
 
     # Commands
     if message.startswith("a/p uptime"):
@@ -69,12 +69,12 @@ def on_message(originalmsg):
     elif message.startswith("a/p ping"):
         api.sendmsg("pong!")
     elif message.startswith("a/p help"):
-        api.sendmsg("available commands: a/p uptime, a/p ping, a/p help, a/p place, a/p grid, a/p mypixels, a/p bulkplace, a/p status\nthere's a maximum of 25 pixel charges for every user. a pixel is given to everyone every 5 seconds.")
+        api.sendmsg("available commands: a/p uptime, a/p ping, a/p help, a/p place, a/p grid, a/p mypixels, a/p bulkplace, a/p status\nthere's a maximum of 25 pixel charges for every user. a pixel is given to everyone every 5 seconds.\nthe max charge is increased for everyone every minute.")
     elif message == "a/p status":
-        api.sendmsg(f"Grid size: {len(grid)}x{len(grid[0])}")
-        api.sendmsg(f"User data: {len(userdata)} users")
+        pixelcount = sum(1 for row in grid for cell in row if cell != "FFFFFF")
+        api.sendmsg(f"Grid size: {len(grid)}x{len(grid[0])}\nUser data: {len(userdata)} users\nPixels placed: {pixelcount}")
     elif message == "a/p mypixels":
-        api.sendmsg(f"{user} has {userdata[user]['pixelsleft']} pixels left")
+        api.sendmsg(f"{user} has {userdata[user]['pixelsleft']}/{userdata[user]['maxcharges']} pixels left")
     
     # Placing part
     elif message.startswith("a/p place"):
@@ -122,9 +122,18 @@ def on_message(originalmsg):
         os.remove("grid.png")
 
 def givepixels():
+    timeelapsed = 0
     while True:
+        timeelapsed += 5
+        if timeelapsed == 60:
+            print("Gave everyone a pixel charge.")
+            timeelapsed = 0
+            for user in userdata:
+                userdata[user]["maxcharges"] += 1
+
+        print("Gave everyone a pixel.")
         for user in userdata:
-            if userdata[user]["pixelsleft"] < 25:
+            if userdata[user]["pixelsleft"] < userdata[user]["maxcharges"]:
                 userdata[user]["pixelsleft"] += 1
         with open("db/userdata.json", "w") as f:
             json.dump(userdata, f)
