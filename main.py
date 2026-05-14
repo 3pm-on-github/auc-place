@@ -61,7 +61,7 @@ def on_message(originalmsg):
     if originalmsg.startswith("auc/place|"):
         return
     if user not in userdata:
-        userdata[user] = {"pixelsleft": 25, "maxcharges": 25} # default max at 25.
+        userdata[user] = {"pixelsleft": 25, "maxcharges": 25, "droplets": 50, "speed": 1} # default max at 25.
 
     # Commands
     if message.startswith("a/p uptime"):
@@ -69,7 +69,7 @@ def on_message(originalmsg):
     elif message.startswith("a/p ping"):
         api.sendmsg("pong!")
     elif message.startswith("a/p help"):
-        api.sendmsg("available commands: a/p uptime, a/p ping, a/p help, a/p place, a/p grid, a/p mypixels, a/p bulkplace, a/p status\nthere's a maximum of 25 pixel charges for every user. a pixel is given to everyone every 5 seconds.\nthe max charge is increased for everyone every minute.")
+        api.sendmsg("available commands: a/p uptime, a/p ping, a/p help, a/p place, a/p grid, a/p mypixels, a/p bulkplace, a/p status, a/p droplets, a/p shop, a/p buy\nthere's a maximum of 25 pixel charges for every user. a pixel is given to everyone every 5 seconds.\nthe max charge is increased for everyone every minute.")
     elif message == "a/p status":
         pixelcount = sum(1 for row in grid for cell in row if cell != "FFFFFF")
         api.sendmsg(f"Grid size: {len(grid)}x{len(grid[0])}\nUser data: {len(userdata)} users\nPixels placed: {pixelcount}")
@@ -90,9 +90,11 @@ def on_message(originalmsg):
         y = int(parts[1])
         color = parts[2].lstrip("#").upper()
         grid[y][x] = color
+        userdata[user]["droplets"] += 1
         with open("db/grid.json", "w") as f:
             json.dump(grid, f)
         api.sendmsg(f"{user} placed {color} at {x}, {y}")
+
     elif message.startswith("a/p bulkplace"):
         # TODO: implement bulk placing
         parts = message.removeprefix("a/p bulkplace").strip().split(" ")
@@ -113,6 +115,7 @@ def on_message(originalmsg):
                 grid[y + j][x + i] = color
         with open("db/grid.json", "w") as f:
             json.dump(grid, f)
+        userdata[user]["droplets"] += width * height
         api.sendmsg(f"{user} placed {color} at {x}, {y} with size {width}x{height}")
         
     elif message.startswith("a/p grid"):
@@ -120,24 +123,106 @@ def on_message(originalmsg):
         link = upload_image("grid.png")
         api.sendmsg(f"grid uploaded to {link}")
         os.remove("grid.png")
+    
+    # Droplets part
+    elif message.startswith("a/p droplets"):
+        api.sendmsg(f"{user} has {userdata[user]['droplets']} droplets")
+    elif message == "a/p shop":
+        api.sendmsg("--- Shop ---\n1. a/p buy [amount] [pixels/maxcharges] / Buys more pixels or max charges.\nPrice: 2 droplets per pixel, 10 droplets per max charge\n2. a/p buy [amount] speed / Buys a speed boost to get more pixels/maxcharges \nPrice: 15 droplets per speed boost")
+    elif message.startswith("a/p buy"):
+        parts = message.removeprefix("a/p buy").strip().split(" ")
+        if len(parts) != 2:
+            api.sendmsg("Usage: a/p buy [amount] [pixels/maxcharges/speed]")
+            return
+        amount = int(parts[0])
+        item = parts[1]
+        if item == "pixels":
+            if userdata[user]["droplets"] < amount * 2:
+                api.sendmsg(f"{user} does not have enough droplets")
+                return
+            userdata[user]["droplets"] -= amount * 2
+            userdata[user]["pixelsleft"] += amount
+        elif item == "maxcharges":
+            if userdata[user]["droplets"] < amount * 10:
+                api.sendmsg(f"{user} does not have enough droplets")
+                return
+            userdata[user]["droplets"] -= amount * 10
+            userdata[user]["maxcharges"] += amount
+        elif item == "speed":
+            if userdata[user]["droplets"] < amount * 15:
+                api.sendmsg(f"{user} does not have enough droplets")
+                return
+            userdata[user]["droplets"] -= amount * 15
+            userdata[user]["speed"] += amount
+        with open("db/userdata.json", "w") as f:
+            json.dump(userdata, f)
+        api.sendmsg(f"{user} bought {amount} {item}")
 
 def givepixels():
     timeelapsed = 0
     while True:
         timeelapsed += 5
         if timeelapsed == 60:
-            print("Gave everyone a pixel charge.")
             timeelapsed = 0
             for user in userdata:
-                userdata[user]["maxcharges"] += 1
+                userdata[user]["maxcharges"] += userdata[user]["speed"]
 
-        print("Gave everyone a pixel.")
         for user in userdata:
             if userdata[user]["pixelsleft"] < userdata[user]["maxcharges"]:
-                userdata[user]["pixelsleft"] += 1
+                userdata[user]["pixelsleft"] += userdata[user]["speed"]
+            userdata[user]["droplets"] += userdata[user]["speed"]*5
         with open("db/userdata.json", "w") as f:
             json.dump(userdata, f)
         time.sleep(5)
+
+def cli_input_loop():
+    while True:
+        try:
+            user_input = input("CLI >>> ").strip()
+            if user_input.lower() in ["exit", "quit"]:
+                print("Exiting CLI...")
+                break
+            elif user_input.startswith("sendacmsg "):
+                api.sendmsg(user_input.replace("sendacmsg ", ""))
+            elif user_input.startswith("givepixels"):
+                user_input_parts = user_input.split(" ")
+                user = user_input_parts[1]
+                amount = int(user_input_parts[2])
+                if user not in userdata:
+                    print(f"User {user} not found")
+                    continue
+                if amount + userdata[user]["pixelsleft"] >= userdata[user]["maxcharges"]:
+                    userdata[user]["pixelsleft"] = userdata[user]["maxcharges"]
+                else:
+                    userdata[user]["pixelsleft"] += amount
+                with open("db/userdata.json", "w") as f:
+                    json.dump(userdata, f)
+                print(f"Gave {user} {amount} pixels")
+            elif user_input.startswith("givemaxcharges"):
+                user_input_parts = user_input.split(" ")
+                user = user_input_parts[1]
+                amount = int(user_input_parts[2])
+                if user not in userdata:
+                    print(f"User {user} not found")
+                    continue
+                userdata[user]["maxcharges"] += amount
+                with open("db/userdata.json", "w") as f:
+                    json.dump(userdata, f)
+                print(f"Gave {user} {amount} max charges")
+            elif user_input.startswith("givedroplets"):
+                user_input_parts = user_input.split(" ")
+                user = user_input_parts[1]
+                amount = int(user_input_parts[2])
+                if user not in userdata:
+                    print(f"User {user} not found")
+                    continue
+                userdata[user]["droplets"] += amount
+                with open("db/userdata.json", "w") as f:
+                    json.dump(userdata, f)
+                print(f"Gave {user} {amount} droplets")
+        except (KeyboardInterrupt, EOFError):
+            api.stop()
+            break
 
 # bot init
 api.init(API_URL)
@@ -145,6 +230,7 @@ api.login(USERNAME, PASSWORD, on_message_callback=on_message)
 print("Bot is running...")
 api.sendmsg("auc/place is online!")
 threading.Thread(target=givepixels).start()
+threading.Thread(target=cli_input_loop).start()
 try:
     while True:
         time.sleep(0.1)
