@@ -90,7 +90,7 @@ def on_message(originalmsg):
         y = int(parts[1])
         color = parts[2].lstrip("#").upper()
         grid[y][x] = color
-        userdata[user]["droplets"] += 1
+        userdata[user]["droplets"] += 0.5
         with open("db/grid.json", "w") as f:
             json.dump(grid, f)
         api.sendmsg(f"{user} placed {color} at {x}, {y}")
@@ -115,7 +115,7 @@ def on_message(originalmsg):
                 grid[y + j][x + i] = color
         with open("db/grid.json", "w") as f:
             json.dump(grid, f)
-        userdata[user]["droplets"] += width * height
+        userdata[user]["droplets"] += (width * height) / 2
         api.sendmsg(f"{user} placed {color} at {x}, {y} with size {width}x{height}")
         
     elif message.startswith("a/p grid"):
