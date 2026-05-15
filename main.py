@@ -109,6 +109,9 @@ def on_message(originalmsg):
         if width * height > userdata[user]["pixelsleft"]:
             api.sendmsg(f"{user} does not have enough pixels")
             return
+        if width > 128 or height > 128:
+            api.sendmsg(f"{user} tried to place a grid that is too big")
+            return
         userdata[user]["pixelsleft"] -= width * height
         for i in range(width):
             for j in range(height):
