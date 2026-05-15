@@ -170,7 +170,7 @@ def givepixels():
         for user in userdata:
             if userdata[user]["pixelsleft"] < userdata[user]["maxcharges"]:
                 userdata[user]["pixelsleft"] += userdata[user]["speed"]
-            userdata[user]["droplets"] += userdata[user]["speed"]*5
+            userdata[user]["droplets"] += 5
         with open("db/userdata.json", "w") as f:
             json.dump(userdata, f)
         time.sleep(5)
