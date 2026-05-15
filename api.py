@@ -15,16 +15,16 @@ socket_connection = None
 
 # HTTP Section
 
-def sendmsg(msg: str):
+def sendmsg(msg: str, channel: str = "bots"):
     if token == "placeholder":
         print("Error: Not authenticated")
         return
     try:
-        response = requests.post(server_url+"/chat", data=f"{msg}|general|", headers={'Content-Type': 'text/plain', 'auth': token, 'Content-Length': str(len(msg) + 9)}, timeout=1)
+        response = requests.post(server_url+"/chat", data=f"{msg}|{channel}|", headers={'Content-Type': 'text/plain', 'auth': token, 'Content-Length': str(len(msg) + 9)}, timeout=1)
         if response.text == "ERR_WHAT_THE_HECK":
             print("Token Expired, getting new token...")
             login(user, passwd, lambda _: None)
-            response = requests.post(server_url+"/chat", data=f"{msg}|general|", headers={'Content-Type': 'text/plain', 'auth': token, 'Content-Length': str(len(msg) + 9)}, timeout=1)
+            response = requests.post(server_url+"/chat", data=f"{msg}|{channel}|", headers={'Content-Type': 'text/plain', 'auth': token, 'Content-Length': str(len(msg) + 9)}, timeout=1)
     except Exception:
         pass
     print(f"Message sent")
