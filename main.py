@@ -69,7 +69,22 @@ def on_message(originalmsg):
     elif message.startswith("a/p ping"):
         api.sendmsg("pong!")
     elif message.startswith("a/p help"):
-        api.sendmsg("available commands: a/p uptime, a/p ping, a/p help, a/p place, a/p grid, a/p mypixels, a/p bulkplace, a/p status, a/p droplets, a/p shop, a/p buy\nthere's a maximum of 25 pixel charges for every user. a pixel is given to everyone every 5 seconds.\nthe max charge is increased for everyone every minute.")
+        api.sendmsg("""=== HELP - AVAILABLE COMMANDS ===
+
+a/p uptime               - reports bot start time
+a/p ping                 - simple health check
+a/p status               - grid size, users, pixels placed
+a/p mypixels             - your pixel / max-charge count
+a/p place <x> <y> <hex>  - place a single pixel
+a/p bulkplace <x> <y> <w> <h> <hex>
+                         - place a rectangle (max 256x256)
+a/p grid                 - generate and upload the current canvas
+a/p droplets             - show your droplet balance
+a/p shop                 - list purchase options
+a/p buy ...                - purchase pixels, max-charges, or speed boosts
+
+Limits: 25 pixel charges per user; a pixel is given to everyone every 5 seconds.
+The max-charge is increased for everyone every minute.""")
     elif message == "a/p status":
         pixelcount = sum(1 for row in grid for cell in row if cell != "FFFFFF")
         api.sendmsg(f"Grid size: {len(grid)}x{len(grid[0])}\nUser data: {len(userdata)} users\nPixels placed: {pixelcount}")
@@ -131,7 +146,16 @@ def on_message(originalmsg):
     elif message.startswith("a/p droplets"):
         api.sendmsg(f"{user} has {userdata[user]['droplets']} droplets")
     elif message == "a/p shop":
-        api.sendmsg("--- Shop ---\n1. a/p buy [amount] [pixels/maxcharges] / Buys more pixels or max charges.\nPrice: 2 droplets per pixel, 10 droplets per max charge\n2. a/p buy [amount] speed / Buys a speed boost to get more pixels/maxcharges \nPrice: 15 droplets per speed boost")
+        api.sendmsg("""=== SHOP - PURCHASE OPTIONS ===
+
+1) Pixels
+   a/p buy <amount> pixels - 2 droplets per pixel
+
+2) Max Charges
+   a/p buy <amount> maxcharges - 10 droplets per charge
+
+3) Speed Boost
+   a/p buy <amount> speed - 15 droplets per speed boost""")
     elif message.startswith("a/p buy"):
         parts = message.removeprefix("a/p buy").strip().split(" ")
         if len(parts) != 2:
