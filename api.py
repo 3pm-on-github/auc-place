@@ -41,14 +41,14 @@ def login(username, password, on_message_callback=None):
         print("Create account: User already exists, Logging in...")
         response = requests.post(server_url+"/login", data=f"{username}|{password}|", headers={'Content-Type': 'text/plain'})
         token = response.text.split("|")[0]
-        print("Login: Success (token: {})".format(token))
+        print("Login: Success")
         if on_message_callback:
             socket_thread = threading.Thread(target=start_socket, daemon=True)
             socket_thread.start()
             time.sleep(2)
     else:
         token = response.text
-        print("Create account: Success (token: {})".format(token))
+        print("Create account: Success")
 
 # Socket Section
 
